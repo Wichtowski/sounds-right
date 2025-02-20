@@ -1,5 +1,6 @@
 from flask import Flask
 
+
 class BaseRouter:
     def __init__(self, app: Flask):
         self.app = app
@@ -10,4 +11,4 @@ class BaseRouter:
         Abstract method that should be implemented by child classes
         to setup their specific routes
         """
-        pass 
+        pass

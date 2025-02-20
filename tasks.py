@@ -9,7 +9,8 @@ import json
 from datetime import datetime, UTC
 from io import BytesIO
 
-@celery.task(name='transcribe_audio', bind=True)
+
+@celery.task(name="transcribe_audio", bind=True)
 def transcribe_audio(self, job_id: str, audio_file_path: str, lyrics: str = None):
     try:
         db = Database()
@@ -19,7 +20,7 @@ def transcribe_audio(self, job_id: str, audio_file_path: str, lyrics: str = None
         job = db.get_transcription_job(job_id)
         if not job:
             raise ValueError(f"Job {job_id} not found")
-            
+
         job.status = TranscriptionStatus.PROCESSING
         job.updated_at = datetime.now(UTC)
         db.update_transcription_job(job)
@@ -38,15 +39,15 @@ def transcribe_audio(self, job_id: str, audio_file_path: str, lyrics: str = None
 
         # Save transcription result to GCS
         # Extract artist, album, and title from the job
-        json_data = BytesIO(json.dumps(result, indent=4).encode('utf-8'))
+        json_data = BytesIO(json.dumps(result, indent=4).encode("utf-8"))
         json_data.seek(0)
         storage.upload_file_object(
-            json_data, 
-            job.artist, 
-            job.album, 
-            job.title, 
-            'transcription.json',
-            'application/json'
+            json_data,
+            job.artist,
+            job.album,
+            job.title,
+            "transcription.json",
+            "application/json",
         )
 
         # Clean up the temporary file
@@ -63,14 +64,14 @@ def transcribe_audio(self, job_id: str, audio_file_path: str, lyrics: str = None
 
     except Exception as e:
         # Update job with error
-        if 'job' in locals():
+        if "job" in locals():
             job.status = TranscriptionStatus.FAILED
             job.error = str(e)
             job.updated_at = datetime.now(UTC)
             db.update_transcription_job(job)
-        
+
         # Clean up the temporary file if it exists
-        if 'local_audio_path' in locals() and os.path.exists(local_audio_path):
+        if "local_audio_path" in locals() and os.path.exists(local_audio_path):
             os.remove(local_audio_path)
-            
+
         raise

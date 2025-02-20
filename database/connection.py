@@ -5,15 +5,16 @@ import os
 from datetime import datetime, UTC
 from database.model.transcription_job import TranscriptionJob, TranscriptionStatus
 
+
 class Database:
     def __init__(self):
-        _mongo_uri = os.getenv('MONGO_URI', 'mongodb://localhost:27017/')
+        _mongo_uri = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
         self.client = MongoClient(_mongo_uri)
         print(f"Connected to MongoDB at {_mongo_uri}")
-        self.db = self.client['sounds_right']
-        self.karaoke_data_collection = self.db['karaoke_data']
-        self.artist_data_collection = self.db['artist_data']
-        self.transcription_data_collection = self.db['transcription_data']
+        self.db = self.client["sounds_right"]
+        self.karaoke_data_collection = self.db["karaoke_data"]
+        self.artist_data_collection = self.db["artist_data"]
+        self.transcription_data_collection = self.db["transcription_data"]
 
     def insert_transcription(self, transcription):
         return self.collection.insert_one(transcription).inserted_id
@@ -37,8 +38,7 @@ class Database:
         """Update a transcription job."""
         job.updated_at = datetime.now(UTC)
         self.transcription_data_collection.update_one(
-            {"id": job.id},
-            {"$set": job.to_dict()}
+            {"id": job.id}, {"$set": job.to_dict()}
         )
         return job
 
@@ -48,10 +48,10 @@ class Database:
         if not doc:
             return None
         return {
-            'id': doc['_id'],
-            'pseudonym': doc['pseudonym'],
-            'fullname': doc['fullname'],
-            'genre': doc['genre']
+            "id": doc["_id"],
+            "pseudonym": doc["pseudonym"],
+            "fullname": doc["fullname"],
+            "genre": doc["genre"],
         }
 
     def create_artist(self, artist_data: dict):
@@ -60,7 +60,11 @@ class Database:
 
     def get_all_artists(self):
         """Get all artists."""
-        return list(self.artist_data_collection.find({}, {'_id': 0, 'pseudonym': 1, 'fullname': 1, 'genre': 1}))
+        return list(
+            self.artist_data_collection.find(
+                {}, {"_id": 0, "pseudonym": 1, "fullname": 1, "genre": 1}
+            )
+        )
 
     def delete_artist(self, pseudonym: str):
         """Delete an artist by pseudonym."""

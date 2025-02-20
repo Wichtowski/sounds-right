@@ -1,14 +1,28 @@
 from datetime import datetime
 from enum import Enum
 
+
 class TranscriptionStatus(Enum):
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
 
+
 class TranscriptionJob:
-    def __init__(self, id: str, artist: str, album: str, title: str, audio_url: str, status: TranscriptionStatus, created_at: datetime, updated_at: datetime, result: dict = None, error: str = None):
+    def __init__(
+        self,
+        id: str,
+        artist: str,
+        album: str,
+        title: str,
+        audio_url: str,
+        status: TranscriptionStatus,
+        created_at: datetime,
+        updated_at: datetime,
+        result: dict = None,
+        error: str = None,
+    ):
         self.id = id
         self.artist = artist
         self.album = album
@@ -31,7 +45,7 @@ class TranscriptionJob:
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
             "result": self.result,
-            "error": self.error
+            "error": self.error,
         }
 
     @staticmethod
@@ -46,5 +60,5 @@ class TranscriptionJob:
             created_at=datetime.fromisoformat(data.get("created_at")),
             updated_at=datetime.fromisoformat(data.get("updated_at")),
             result=data.get("result"),
-            error=data.get("error")
-        ) 
+            error=data.get("error"),
+        )

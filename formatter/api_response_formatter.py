@@ -1,9 +1,10 @@
 from flask import jsonify
 
+
 class ApiResponseFormatter:
     def __init__(self):
         self.data = []
-        self.message = 'success'
+        self.message = "success"
         self.errors = []
         self.status = 200
         self.additional_data = {}
@@ -47,18 +48,18 @@ class ApiResponseFormatter:
     def response(self):
         response = {}
         if self.include_data:
-            response['data'] = self.data
-        response['message'] = self.message
-        response['errors'] = self.errors
-        response['status'] = self.status
+            response["data"] = self.data
+        response["message"] = self.message
+        response["errors"] = self.errors
+        response["status"] = self.status
         if self.include_additional_data:
-            response['additional_data'] = self.additional_data
+            response["additional_data"] = self.additional_data
         self._reset()
-        return jsonify(response), response['status'] 
+        return jsonify(response), response["status"]
 
     def _reset(self):
         self.data = []
-        self.message = 'success'
+        self.message = "success"
         self.errors = []
         self.status = 200
         self.additional_data = {}
