@@ -7,6 +7,7 @@ class TranscriptionStatus(Enum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
+    APPROVED = "approved"
 
 
 class TranscriptionJob:
@@ -20,6 +21,7 @@ class TranscriptionJob:
         status: TranscriptionStatus,
         created_at: datetime,
         updated_at: datetime,
+        version: int = 1,
         result: dict = None,
         error: str = None,
     ):
@@ -31,6 +33,7 @@ class TranscriptionJob:
         self.status = status
         self.created_at = created_at
         self.updated_at = updated_at
+        self.version = version
         self.result = result
         self.error = error
 
@@ -44,6 +47,7 @@ class TranscriptionJob:
             "status": self.status.value,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
+            "version": self.version,
             "result": self.result,
             "error": self.error,
         }
@@ -59,6 +63,7 @@ class TranscriptionJob:
             status=TranscriptionStatus(data.get("status")),
             created_at=datetime.fromisoformat(data.get("created_at")),
             updated_at=datetime.fromisoformat(data.get("updated_at")),
+            version=data.get("version", 1),
             result=data.get("result"),
             error=data.get("error"),
         )

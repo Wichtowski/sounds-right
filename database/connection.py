@@ -1,9 +1,7 @@
-from flask import Flask, request
 from pymongo import MongoClient
-from dotenv import load_dotenv
 import os
 from datetime import datetime, UTC
-from database.model.transcription_job import TranscriptionJob, TranscriptionStatus
+from database.model.transcription_job import TranscriptionJob
 
 
 class Database:
@@ -15,6 +13,7 @@ class Database:
         self.karaoke_data_collection = self.db["karaoke_data"]
         self.artist_data_collection = self.db["artist_data"]
         self.transcription_data_collection = self.db["transcription_data"]
+        self.user_collection = self.db["users"]
 
     def insert_transcription(self, transcription):
         return self.collection.insert_one(transcription).inserted_id

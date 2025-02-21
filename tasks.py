@@ -5,9 +5,7 @@ from database.connection import Database
 from repository.storage_repository import StorageRepository
 import whisper
 import os
-import json
 from datetime import datetime, UTC
-from io import BytesIO
 
 
 @celery.task(name="transcribe_audio", bind=True)
@@ -37,24 +35,11 @@ def transcribe_audio(self, job_id: str, audio_file_path: str, lyrics: str = None
         # Perform transcription
         result = transcriber.transcribe_audio(local_audio_path, lyrics)
 
-        # Save transcription result to GCS
-        # Extract artist, album, and title from the job
-        json_data = BytesIO(json.dumps(result, indent=4).encode("utf-8"))
-        json_data.seek(0)
-        storage.upload_file_object(
-            json_data,
-            job.artist,
-            job.album,
-            job.title,
-            "transcription.json",
-            "application/json",
-        )
-
         # Clean up the temporary file
         if os.path.exists(local_audio_path):
             os.remove(local_audio_path)
 
-        # Update job with success
+        # Update job with success and store result in MongoDB
         job.status = TranscriptionStatus.COMPLETED
         job.result = result
         job.updated_at = datetime.now(UTC)

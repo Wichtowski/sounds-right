@@ -1,21 +1,15 @@
 import os
 import tempfile
 from google.cloud import storage
-from google.auth.exceptions import DefaultCredentialsError
 from werkzeug.datastructures import FileStorage
 from io import BytesIO
 
 
 class StorageRepository:
-    def __init__(self):
-        self.review_bucket = "song-transcription-review"
-        self.production_bucket = "song-transcription"
-        try:
-            self.storage_client = storage.Client()
-        except DefaultCredentialsError:
-            raise Exception(
-                "Google Cloud credentials not found. Please set up Application Default Credentials by running 'gcloud auth application-default login'."
-            )
+    def __init__(self, storage_client: storage.Client, review_bucket: str, production_bucket: str):
+        self.review_bucket = review_bucket
+        self.production_bucket = production_bucket
+        self.storage_client = storage_client
 
     def _get_next_version(self, blob_prefix: str) -> int:
         """

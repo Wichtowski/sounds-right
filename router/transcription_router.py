@@ -26,7 +26,6 @@ class TranscriptionRouter(BaseRouter):
             ),
             methods=["GET"],
         )
-
         self.app.add_url_rule(
             "/transcription/review/<artist>/<album>/<title>/<int:version>",
             "approve_transcription",
@@ -35,3 +34,4 @@ class TranscriptionRouter(BaseRouter):
             ),
             methods=["POST"],
         )
+
