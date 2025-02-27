@@ -137,7 +137,7 @@ class ArtistController:
 
         artist_data = self.db.artist_data_collection.find_one(query)
 
-        if not artist_data:
+        if not artist_data and request.json:
             return (
                 self.res_formatter.with_errors("Artist not found")
                 .with_status(404)

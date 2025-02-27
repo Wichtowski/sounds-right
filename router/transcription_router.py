@@ -1,4 +1,5 @@
 from flask import Flask, request
+
 from controller.transcription import TranscriptionController
 from router.base_router import BaseRouter
 
@@ -27,11 +28,10 @@ class TranscriptionRouter(BaseRouter):
             methods=["GET"],
         )
         self.app.add_url_rule(
-            "/transcription/review/<artist>/<album>/<title>/<int:version>",
+            "/transcription/approve/<job_id>",
             "approve_transcription",
-            view_func=lambda artist, album, title, version: self.transcribe_controller.approve_transcription(
-                artist, album, title, version
+            view_func=lambda job_id: self.transcribe_controller.approve_transcription(
+                job_id
             ),
             methods=["POST"],
         )
-

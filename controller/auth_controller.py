@@ -1,25 +1,31 @@
 from flask import request
 import jwt
-import os
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from database.connection import Database
 from database.model.user import User
 from formatter.api_response_formatter import ApiResponseFormatter
 
 
 class AuthController:
-    def __init__(self, db: Database, res_formatter: ApiResponseFormatter):
+    def __init__(
+        self,
+        db: Database,
+        res_formatter: ApiResponseFormatter,
+        jwt_secret: str,
+        token_expiry: int,
+    ):
         self.db = db
         self.res_formatter = res_formatter
-        self.jwt_secret = os.getenv("JWT_SECRET", "your-secret-key")
-        self.token_expiry = int(os.getenv("TOKEN_EXPIRY_HOURS", "24"))
+        self.jwt_secret = jwt_secret
+        self.token_expiry = token_expiry
 
     def _generate_token(self, user: User) -> str:
         payload = {
             "user_id": str(user._id),
             "username": user.username,
             "is_admin": user.is_admin,
-            "exp": datetime.now(UTC) + timedelta(hours=self.token_expiry),
+            "exp": datetime.now(ZoneInfo("UTC")) + timedelta(hours=self.token_expiry),
         }
         return jwt.encode(payload, self.jwt_secret, algorithm="HS256")
 
@@ -42,14 +48,13 @@ class AuthController:
                         .response()
                     )
 
-            # Check if user already exists
-            if User.get_by_username(self.db, data["username"]):
+            user_by_username = User.get_by_username(self.db, data["username"])
+            if user_by_username is not None:
                 return (
                     self.res_formatter.with_errors("Username already exists")
                     .with_status(400)
                     .response()
                 )
-
             if User.get_by_email(self.db, data["email"]):
                 return (
                     self.res_formatter.with_errors("Email already exists")
@@ -145,22 +150,17 @@ class AuthController:
                 )
 
             try:
-                payload = jwt.decode(
-                    auth_header, self.jwt_secret, algorithms=["HS256"]
-                )
+                payload = jwt.decode(auth_header, self.jwt_secret, algorithms=["HS256"])
                 user = User.get_by_username(self.db, payload["username"])
                 if not user:
                     raise jwt.InvalidTokenError()
 
-                return (
-                    self.res_formatter.with_data(
-                        {
-                            "valid": True,
-                            "user": user.to_dict(),
-                        }
-                    )
-                    .response()
-                )
+                return self.res_formatter.with_data(
+                    {
+                        "valid": True,
+                        "user": user.to_dict(),
+                    }
+                ).response()
 
             except jwt.ExpiredSignatureError:
                 return (
@@ -176,4 +176,4 @@ class AuthController:
                 )
 
         except Exception as e:
-            return self.res_formatter.with_exception(e).response() 
+            return self.res_formatter.with_exception(e).response()

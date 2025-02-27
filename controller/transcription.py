@@ -11,6 +11,7 @@ class TranscriptionController:
         transcription_service: TranscriptionService,
         res_formatter: ApiResponseFormatter,
     ):
+        self.db = db
         self.transcription_service = transcription_service
         self.res_formatter = res_formatter
 
@@ -44,21 +45,13 @@ class TranscriptionController:
         # Validate audio file
         error = self.transcription_service.validate_audio_file(audio_file)
         if error:
-            return (
-                self.res_formatter.with_errors(error)
-                .with_status(400)
-                .response()
-            )
+            return self.res_formatter.with_errors(error).with_status(400).response()
 
         lyrics_file = request.files.get("lyrics")
         if lyrics_file:
             error = self.transcription_service.validate_lyrics_file(lyrics_file)
             if error:
-                return (
-                    self.res_formatter.with_errors(error)
-                    .with_status(400)
-                    .response()
-                )
+                return self.res_formatter.with_errors(error).with_status(400).response()
 
         try:
             job = self.transcription_service.create_transcription_job(
@@ -66,7 +59,7 @@ class TranscriptionController:
                 album=album,
                 title=title,
                 audio_file=audio_file,
-                lyrics_file=lyrics_file
+                lyrics_file=lyrics_file,
             )
 
             return (
@@ -112,15 +105,15 @@ class TranscriptionController:
 
         return self.res_formatter.with_data(response_data).response()
 
-    def approve_transcription(self, artist: str, album: str, title: str, version: int):
-        """Approve transcription by updating its status in MongoDB."""
+    def approve_transcription(self, job_id: str):
+        """Approve transcription by updating its status in MongoDB using job_id."""
         try:
-            job = self.transcription_service.approve_transcription(artist, album, title, version)
-            
+            job = self.transcription_service.approve_transcription(job_id)
+
             if not job:
                 return (
                     self.res_formatter.with_errors(
-                        f"No completed transcription found for this song (version {version})"
+                        f"No completed transcription found for job ID: {job_id}"
                     )
                     .with_status(404)
                     .response()
@@ -131,7 +124,6 @@ class TranscriptionController:
                     {
                         "message": "Transcription approved successfully",
                         "job_id": job["id"],
-                        "version": version
                     }
                 )
                 .with_status(200)

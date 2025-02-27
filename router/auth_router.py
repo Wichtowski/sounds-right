@@ -1,4 +1,5 @@
 from flask import Flask
+
 from controller.auth_controller import AuthController
 from router.base_router import BaseRouter
 
@@ -28,4 +29,4 @@ class AuthRouter(BaseRouter):
             "verify_token",
             view_func=self.auth_controller.verify_token,
             methods=["GET"],
-        ) 
+        )

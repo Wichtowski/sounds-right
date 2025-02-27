@@ -126,4 +126,22 @@ cython_debug/
 *.json
 
 google*
-scripts.txt
+
+# Poetry
+poetry.lock
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Celery
+celerybeat.pid
+experiments/

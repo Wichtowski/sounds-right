@@ -1,7 +1,9 @@
+from datetime import UTC, datetime
+
 from bson.objectid import ObjectId
+from werkzeug.security import check_password_hash, generate_password_hash
+
 from database.connection import Database
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, UTC
 
 
 class User:
@@ -82,4 +84,4 @@ class User:
         return None
 
     def __repr__(self):
-        return f"<User(username='{self.username}', email='{self.email}')>" 
+        return f"<User(username='{self.username}', email='{self.email}')>"

@@ -1,13 +1,15 @@
-from flask import Flask
 from dotenv import load_dotenv
-from container.container import Container
-from container.config import get_config
-from middleware.auth_middleware import setup_auth_middleware
+from flask import Blueprint, Flask
 
+from container.config import get_config
+from container.container import Container
+from middleware.auth_middleware import setup_auth_middleware
 
 load_dotenv(dotenv_path=".env")
 app = Flask(__name__)
-app.config["APPLICATION_ROOT"] = "/api/v1/sounds-right"
+
+# Create Blueprint for API v1
+api_v1 = Blueprint("api_v1", __name__, url_prefix="/api/v1")
 
 
 def create_app():
@@ -20,16 +22,21 @@ def create_app():
     artist_controller = container.artist_controller()
     transcribe_controller = container.transcription_controller()
     auth_controller = container.auth_controller()
+    user_controller = container.user_controller()
 
     # Setup authentication middleware
-    setup_auth_middleware(app)
+    setup_auth_middleware(api_v1)
 
     # Initialize routers with injected controllers
-    from router.router import Router
     from router.auth_router import AuthRouter
+    from router.router import Router
 
-    Router(app, artist_controller, transcribe_controller)
-    AuthRouter(app, auth_controller)
+    # Create router instances with the blueprint
+    Router(api_v1, artist_controller, transcribe_controller, user_controller)
+    AuthRouter(api_v1, auth_controller)
+
+    # Register the blueprint with the app
+    app.register_blueprint(api_v1)
 
     return app
 

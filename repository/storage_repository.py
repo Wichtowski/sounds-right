@@ -1,12 +1,15 @@
 import os
 import tempfile
+from io import BytesIO
+
 from google.cloud import storage
 from werkzeug.datastructures import FileStorage
-from io import BytesIO
 
 
 class StorageRepository:
-    def __init__(self, storage_client: storage.Client, review_bucket: str, production_bucket: str):
+    def __init__(
+        self, storage_client: storage.Client, review_bucket: str, production_bucket: str
+    ):
         self.review_bucket = review_bucket
         self.production_bucket = production_bucket
         self.storage_client = storage_client
@@ -193,8 +196,8 @@ class StorageRepository:
             source_blob.delete()
 
             # Store the new URL
-            moved_files[os.path.basename(file_name)] = (
-                f"gs://{self.production_bucket}/{file_name}"
-            )
+            moved_files[
+                os.path.basename(file_name)
+            ] = f"gs://{self.production_bucket}/{file_name}"
 
         return moved_files

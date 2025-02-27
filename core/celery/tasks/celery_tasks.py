@@ -1,17 +1,23 @@
-from celery_app import celery
-from transcriber.transcriber import Transcriber
-from database.model.transcription_job import TranscriptionStatus
-from database.connection import Database
-from repository.storage_repository import StorageRepository
-import whisper
 import os
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+
+import whisper
+
+
+from celery.celery_app import celery
+from celery.celery_config import app
+from container.config import get_config
+from database.connection import Database
+from database.model.transcription_job import TranscriptionStatus
+from repository.storage_repository import StorageRepository
+from transcriber.transcriber import Transcriber
 
 
 @celery.task(name="transcribe_audio", bind=True)
 def transcribe_audio(self, job_id: str, audio_file_path: str, lyrics: str = None):
     try:
-        db = Database()
+        config = get_config()
+        db = Database(config)
         storage = StorageRepository()
 
         # Update job status to processing
@@ -60,3 +66,15 @@ def transcribe_audio(self, job_id: str, audio_file_path: str, lyrics: str = None
             os.remove(local_audio_path)
 
         raise
+
+
+@app.task(queue="high_priority")
+def high_priority_task(data):
+    # Your high priority task logic
+    return f"Processed high priority task: {data}"
+
+
+@app.task(queue="default")
+def default_task(data):
+    # Your default task logic
+    return f"Processed default task: {data}"

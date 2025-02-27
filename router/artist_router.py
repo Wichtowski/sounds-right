@@ -1,5 +1,6 @@
 from flask import Flask, request
-from controller.artist import ArtistController
+
+from controller.artist_controller import ArtistController
 from router.base_router import BaseRouter
 
 

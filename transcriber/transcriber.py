@@ -1,5 +1,5 @@
-import json
 import os
+
 import whisper
 
 
@@ -76,18 +76,3 @@ class Transcriber:
         }
 
         return transcript_data
-
-
-# if __name__ == "__main__":
-#     audio_file = "Kendrick Lamar - squabble up (Official Audio).mp3"
-#     with open(audio_file.replace('.mp3', '.txt'), "r", encoding="utf-8") as file:
-#         provided_lyrics = file.read()
-
-#     transcriber = Transcriber()
-#     transcript = transcriber.transcribe_audio(audio_file, provided_lyrics,
-#                                               output_filename=audio_file.replace('.mp3', '_transcription.json'),
-#                                               cache_filename=audio_file.replace('.mp3', '_transcription_cache.json'))
-
-#     output_file = audio_file.replace('.mp3', '_karaoke_timing.json')
-#     with open(output_file, "w", encoding="utf-8") as f:
-#         json.dump(transcript, f, indent=4)

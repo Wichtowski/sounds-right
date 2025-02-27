@@ -1,18 +1,19 @@
 from typing import Dict, Any
+import os
 
 
-def get_config() -> Dict[str, Any]:
+def get_config() -> Dict[str, str]:
     return {
         "storage": {
             "review_bucket": "song-transcription-review",
-            "production_bucket": "song-transcription"
+            "production_bucket": "song-transcription",
         },
         "database": {
-            "uri": "mongodb://localhost:27017/"
+            "mongo_uri": os.getenv("MONGO_URI"),
+            "redis_url": os.getenv("REDIS_URL"),
         },
         "jwt": {
-            "secret": "your-secret-key",
-            "expiry_hours": 24
-        }
-    } 
-
+            "secret": os.getenv("JWT_SECRET"),
+            "expiry_hours": 24,
+        },
+    }

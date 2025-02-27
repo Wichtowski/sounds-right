@@ -1,6 +1,8 @@
-from datetime import datetime, UTC
 import uuid
+from datetime import UTC, datetime
+
 from markupsafe import escape
+
 from database.connection import Database
 from database.model.transcription_job import TranscriptionJob, TranscriptionStatus
 from repository.storage_repository import StorageRepository
@@ -51,7 +53,9 @@ class TranscriptionService:
             return "Lyrics file must have a .txt extension"
         return None
 
-    def create_transcription_job(self, artist: str, album: str, title: str, audio_file, lyrics_file=None):
+    def create_transcription_job(
+        self, artist: str, album: str, title: str, audio_file, lyrics_file=None
+    ):
         """Create and initiate a new transcription job."""
         artist = escape(artist)
         album = escape(album)
@@ -64,7 +68,9 @@ class TranscriptionService:
             self.storage_repository.upload_file(lyrics_file, artist, album, title)
 
         # Upload the audio file
-        audio_url = self.storage_repository.upload_file(audio_file, artist, album, title)
+        audio_url = self.storage_repository.upload_file(
+            audio_file, artist, album, title
+        )
 
         # Create a new transcription job
         job_id = str(uuid.uuid4())
@@ -76,7 +82,7 @@ class TranscriptionService:
                 "album": album,
                 "title": title,
             },
-            sort=[("version", -1)]
+            sort=[("version", -1)],
         )
         version = (latest_job.get("version", 0) + 1) if latest_job else 1
 
@@ -109,13 +115,15 @@ class TranscriptionService:
         title = title.strip()
 
         # Find the specific version of the transcription job
-        job = self.db.transcription_data_collection.find_one({
-            "artist": artist,
-            "album": album,
-            "title": title,
-            "version": version,
-            "status": TranscriptionStatus.COMPLETED.value
-        })
+        job = self.db.transcription_data_collection.find_one(
+            {
+                "artist": artist,
+                "album": album,
+                "title": title,
+                "version": version,
+                "status": TranscriptionStatus.COMPLETED.value,
+            }
+        )
 
         if not job:
             return None
@@ -126,9 +134,9 @@ class TranscriptionService:
             {
                 "$set": {
                     "status": TranscriptionStatus.APPROVED.value,
-                    "updated_at": datetime.now(UTC)
+                    "updated_at": datetime.now(UTC),
                 }
-            }
+            },
         )
 
-        return job 
+        return job

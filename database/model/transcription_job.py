@@ -3,7 +3,7 @@ from enum import Enum
 
 
 class TranscriptionStatus(Enum):
-    PENDING = "pending"
+    PENDING = "pending for approval"
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
