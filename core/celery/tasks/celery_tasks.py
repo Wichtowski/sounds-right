@@ -3,9 +3,8 @@ from datetime import UTC, datetime
 
 import whisper
 
-
-from celery.celery_app import celery
-from celery.celery_config import app
+from core.celery.celery_app import celery
+from core.celery.celery_config import app
 from container.config import get_config
 from database.connection import Database
 from database.model.transcription_job import TranscriptionStatus

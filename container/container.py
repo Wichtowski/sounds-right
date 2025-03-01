@@ -1,6 +1,6 @@
 from dependency_injector import containers, providers
 from google.cloud import storage
-import whisper
+from whisper import load_model
 from database.connection import Database
 from repository.storage_repository import StorageRepository
 from transcriber.transcriber import Transcriber
@@ -39,12 +39,8 @@ class Container(containers.DeclarativeContainer):
     )
 
     # Models and Core Components
-    whisper_model = providers.Singleton(
-        whisper.load_model, "base"
-    )  # Speech recognition model
-    transcriber = providers.Singleton(
-        Transcriber, model=whisper_model
-    )  # Audio transcription component
+    whisper_model = providers.Singleton(load_model, "base")  # Speech recognition model
+    transcriber = providers.Singleton(Transcriber, model=whisper_model)  # Audio transcription component
 
     # Formatters
     api_response_formatter = providers.Factory(ApiResponseFormatter)
