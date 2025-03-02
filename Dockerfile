@@ -1,29 +1,17 @@
-FROM python:3.11-slim
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    ffmpeg \
-    git \
-    libsndfile1 \
-    portaudio19-dev \
-    python3-dev \
-    && rm -rf /var/lib/apt/lists/*
-
 # Set working directory
 WORKDIR /app
 
-# Copy requirements first to leverage Docker cache
-COPY requirements.txt .
+# Copy only the necessary files first (to optimize caching)
+COPY requirements.txt ./
 
-# Install Python dependencies
-RUN pip install --cache-dir /tmp/pip-cache requirements.txt
+# Install dependencies
+RUN pip install --no-cache-dir --prefer-binary -r requirements.txt
 
-# Copy the rest of the application
-COPY . .
+# Copy the "app" folder *contents* directly into /app, not the folder itself
+COPY app/ ./
 
-# Expose the port the app runs on
+# Expose Flask's default port
 EXPOSE 5001
 
-# Command to run the application
-CMD ["python", "app.py"]
+# Run the application
+CMD ["python", "/app/app.py"]

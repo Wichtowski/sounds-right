@@ -15,6 +15,20 @@ services:
     ports:
       - "6380:6379" 
 
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: celery -A app.core.celery.app worker --loglevel=info
+    volumes:
+      - .:/app
+    depends_on:
+      - rabbitmq
+      - redis
+    environment:
+      - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379/0
+
   app:
     build:
       context: .
@@ -22,8 +36,9 @@ services:
     ports:
       - "5001:5001"
     depends_on:
-      - rabbitmq
-      - redis
+      - celery
     environment:
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_USER=guest
+      - PYTHONPATH=/app
+      - REDIS_URL=redis://redis:6379/0
