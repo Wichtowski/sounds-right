@@ -1,0 +1,10 @@
+celery
+redis
+python-dotenv
+whisper
+google-cloud-storage
+pymongo
+pydub
+numpy
+demucs
+soundfile 

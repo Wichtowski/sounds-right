@@ -15,5 +15,4 @@ celery-types
 demucs
 soundfile
 dependency_injector
-treetable
-dora
+scikit-learn

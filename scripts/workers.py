@@ -1,4 +1,4 @@
-from core.celery.celery_config import app
+from core.celery.app import celery_config
 
 
 def start_worker():

@@ -1,3 +1,11 @@
+# Use Python 3.11 slim image as base
+FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y \
+    libsndfile1 \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 # Set working directory
 WORKDIR /app
 
@@ -5,7 +13,8 @@ WORKDIR /app
 COPY requirements.txt ./
 
 # Install dependencies
-RUN pip install --no-cache-dir --prefer-binary -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir --prefer-binary -r requirements.txt
 
 # Copy the "app" folder *contents* directly into /app, not the folder itself
 COPY app/ ./
@@ -14,4 +23,4 @@ COPY app/ ./
 EXPOSE 5001
 
 # Run the application
-CMD ["python", "/app/app.py"]
+CMD ["python", "app.py"]

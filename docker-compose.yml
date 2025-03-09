@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   rabbitmq:
     image: rabbitmq:3-management
@@ -7,27 +5,40 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      - RABBITMQ_DEFAULT_USER=guest
-      - RABBITMQ_DEFAULT_PASS=guest
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-dev}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-dev}
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:latest
     ports:
-      - "6380:6379" 
+      - "6379:6379"  # Ensure correct mapping
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   celery:
     build:
       context: .
-      dockerfile: Dockerfile
-    command: celery -A app.core.celery.app worker --loglevel=info
+      dockerfile: core/celery/Dockerfile
     volumes:
       - .:/app
     depends_on:
-      - rabbitmq
-      - redis
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-dev}:${RABBITMQ_PASSWORD:-dev}@rabbitmq:5672/
+      - MONGO_URI=${MONGO_URI}
 
   app:
     build:
@@ -36,9 +47,14 @@ services:
     ports:
       - "5001:5001"
     depends_on:
-      - celery
+      celery:
+        condition: service_started
     environment:
       - RABBITMQ_HOST=rabbitmq
-      - RABBITMQ_USER=guest
+      - RABBITMQ_USER=${RABBITMQ_USER:-dev}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-dev}
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
+      - MONGO_URI=${MONGO_URI}
+      - JWT_SECRET=${JWT_SECRET}
+      - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-flask-storage-key.json}

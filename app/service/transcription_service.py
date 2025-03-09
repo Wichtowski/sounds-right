@@ -6,7 +6,7 @@ from markupsafe import escape
 from database.connection import Database
 from database.model.transcription_job import TranscriptionJob, TranscriptionStatus
 from repository.storage_repository import StorageRepository
-from core.celery.tasks.celery_tasks import transcribe_audio
+from core.celery.app import transcribe_audio
 
 
 class TranscriptionService:
