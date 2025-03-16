@@ -29,9 +29,9 @@ COPY --from=builder /usr/local/lib/python3.11/site-packages/ /usr/local/lib/pyth
 COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 # Copy the entire app directory
-COPY app/core/celery ./
+COPY app/ ./
 # Set environment variables
 ENV PYTHONPATH=/app
 
 # Run Celery worker
-CMD ["celery", "-A", "app.core.celery.app", "worker", "--loglevel=info"] 
+CMD ["celery", "-A", "core.celery.app:app", "worker", "--loglevel=info"] 

@@ -1,10 +1,14 @@
 celery
 redis
 python-dotenv
-whisper
+openai-whisper
 google-cloud-storage
 pymongo
 pydub
 numpy
 demucs
-soundfile 
+soundfile
+werkzeug
+flask
+dependency_injector
+pika 

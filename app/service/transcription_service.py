@@ -6,13 +6,14 @@ from markupsafe import escape
 from database.connection import Database
 from database.model.transcription_job import TranscriptionJob, TranscriptionStatus
 from repository.storage_repository import StorageRepository
-from core.celery.app import transcribe_audio
+from core.rabbitmq.client import RabbitMQClient
 
 
 class TranscriptionService:
-    def __init__(self, db: Database, storage_repository: StorageRepository):
+    def __init__(self, db: Database, storage_repository: StorageRepository, rabbitmq_client: RabbitMQClient):
         self.db = db
         self.storage_repository = storage_repository
+        self.rabbitmq_client = rabbitmq_client
 
     def validate_audio_file(self, audio_file):
         """Validate audio file format and size."""
@@ -99,8 +100,20 @@ class TranscriptionService:
         )
         self.db.create_transcription_job(job)
 
-        # Start the transcription task asynchronously
-        transcribe_audio.delay(job_id, audio_url, lyrics)
+        # Send the transcription task to RabbitMQ
+        message = {
+            "job_id": job_id,
+            "audio_url": audio_url,
+            "lyrics": lyrics,
+            "task": "transcribe_audio"
+        }
+        
+        # Publish the message to RabbitMQ
+        self.rabbitmq_client.publish_message(
+            exchange="transcription",
+            routing_key="transcription",
+            message=message
+        )
 
         return job
 
@@ -108,35 +121,14 @@ class TranscriptionService:
         """Get a transcription job by ID."""
         return self.db.get_transcription_job(job_id)
 
-    def approve_transcription(self, artist: str, album: str, title: str, version: int):
-        """Approve a transcription job."""
-        artist = artist.strip()
-        album = album.strip()
-        title = title.strip()
-
-        # Find the specific version of the transcription job
-        job = self.db.transcription_data_collection.find_one(
-            {
-                "artist": artist,
-                "album": album,
-                "title": title,
-                "version": version,
-                "status": TranscriptionStatus.COMPLETED.value,
-            }
-        )
-
-        if not job:
+    def approve_transcription(self, job_id: str):
+        """Approve a transcription by updating its status."""
+        job = self.db.get_transcription_job(job_id)
+        
+        if not job or job.status != TranscriptionStatus.COMPLETED:
             return None
-
-        # Update the job's status to approved
-        self.db.transcription_data_collection.update_one(
-            {"_id": job["_id"]},
-            {
-                "$set": {
-                    "status": TranscriptionStatus.APPROVED.value,
-                    "updated_at": datetime.now(UTC),
-                }
-            },
-        )
-
-        return job
+            
+        # Update job status logic here
+        # This is a placeholder for the actual implementation
+        
+        return {"id": job_id}

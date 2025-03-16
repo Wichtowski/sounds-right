@@ -12,6 +12,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
   redis:
     image: redis:latest
@@ -22,13 +24,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    volumes:
+      - redis_data:/data
 
   celery:
     build:
       context: .
-      dockerfile: core/celery/Dockerfile
+      dockerfile: app/core/celery/Dockerfile
     volumes:
-      - .:/app
+      - ./app:/app
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -38,6 +42,9 @@ services:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
       - RABBITMQ_URL=amqp://${RABBITMQ_USER:-dev}:${RABBITMQ_PASSWORD:-dev}@rabbitmq:5672/
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=${RABBITMQ_USER:-dev}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-dev}
       - MONGO_URI=${MONGO_URI}
 
   app:
@@ -55,6 +62,11 @@ services:
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD:-dev}
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-dev}:${RABBITMQ_PASSWORD:-dev}@rabbitmq:5672/
       - MONGO_URI=${MONGO_URI}
       - JWT_SECRET=${JWT_SECRET}
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-flask-storage-key.json}
+
+volumes:
+  rabbitmq_data:
+  redis_data:

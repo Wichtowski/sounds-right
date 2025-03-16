@@ -11,6 +11,7 @@ from controller.auth_controller import AuthController
 from service.transcription_service import TranscriptionService
 from controller.user_controller import UserController
 from service.user_service import UserService
+from core.rabbitmq.client import RabbitMQClient
 
 
 class Container(containers.DeclarativeContainer):
@@ -28,6 +29,9 @@ class Container(containers.DeclarativeContainer):
     # These are fundamental services that other components depend on
     database = providers.Singleton(Database, mongo_uri=config.database.mongo_uri)
     storage_client = providers.Singleton(storage.Client)
+    
+    # Message broker
+    rabbitmq_client = providers.Singleton(RabbitMQClient)
 
     # Repositories
     # Data access layer - handles storage operations
@@ -50,6 +54,7 @@ class Container(containers.DeclarativeContainer):
         TranscriptionService,
         db=database,
         storage_repository=storage_repository,
+        rabbitmq_client=rabbitmq_client,
     )
 
     # Controllers
