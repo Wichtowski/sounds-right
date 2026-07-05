@@ -14,7 +14,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -123,7 +122,8 @@ cython_debug/
 
 *.mp3
 *.mp4
-*.json
+!apps/web/package-lock.json
+!infra/minio/*.json
 
 google*
 
@@ -142,6 +142,25 @@ venv/
 .env
 .env.local
 
+# Whisper.cpp models (large binaries, never commit)
+/models/
+*.bin
+
 # Celery
 celerybeat.pid
 experiments/
+.env
+.env.*
+!.env.example
+.venv
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+node_modules/
+dist/
+build/
+.next/
+.vinext/
+next-env.d.ts
+.DS_Store

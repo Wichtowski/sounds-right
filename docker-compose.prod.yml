@@ -1,94 +1,108 @@
+version: '3.8'
+
 services:
   sr-envoy:
     image: envoyproxy/envoy:v1.31-latest
-    depends_on:
-      sr-api:
-        condition: service_started
+    restart: unless-stopped
     ports:
       - "${ENVOY_PORT}:8080"
     volumes:
       - ./infra/envoy/envoy.yaml:/etc/envoy/envoy.yaml:ro
+    networks:
+      - edge_net
+      - app_net
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   sr-api:
     image: ghcr.io/astral-sh/uv:python3.12-bookworm
+    restart: unless-stopped
     working_dir: /workspace/apps/api
-    command: uv run litestar --app sounds_right_api.main:app run --host 0.0.0.0 --port 8000 --reload
     env_file:
-      - .env.example
+      - .env
+    command: uv run litestar --app sounds_right_api.main:app run --host 0.0.0.0 --port 8000
     environment:
       PYTHONUNBUFFERED: "1"
-      UV_PROJECT_ENVIRONMENT: /workspace/apps/api/.venv
     depends_on:
-      sr-postgres:
-        condition: service_healthy
-      sr-redpanda:
-        condition: service_healthy
-      sr-redpanda-init:
-        condition: service_completed_successfully
-      sr-minio:
-        condition: service_healthy
-      sr-minio-init:
-        condition: service_completed_successfully
+      - sr-postgres
+      - sr-redpanda
+      - sr-minio
     expose:
-      - "8000"
-    volumes:
-      - .:/workspace
+      - "${API_PORT}"
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - app_net
+      - data_net
+    mem_limit: 768m
+    cpus: "1.0"
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   sr-worker:
     build:
       context: ./apps/worker
     # image: ghcr.io/astral-sh/uv:python3.12-bookworm
+    restart: unless-stopped
     working_dir: /workspace/apps/worker
-    command: uv run python -m sounds_right_worker.main
     env_file:
-      - .env.example
+      - .env
+    command: uv run python -m sounds_right_worker.main
     environment:
       PYTHONUNBUFFERED: "1"
-      UV_PROJECT_ENVIRONMENT: /workspace/apps/worker/.venv
-      # The default docker worker runs in mock mode because whisper.cpp + ffmpeg
-      # are not installed in this image. Run the real worker on the host with
-      # `make worker` (uses your local ~/whisper.cpp build), or point
-      # WHISPER_CPP_PATH / WHISPER_MODEL_PATH at a provisioned model volume.
-      WORKER_MOCK_MODE: "true"
     depends_on:
-      sr-redpanda:
-        condition: service_healthy
-      sr-redpanda-init:
-        condition: service_completed_successfully
-      sr-minio:
-        condition: service_healthy
-      sr-minio-init:
-        condition: service_completed_successfully
-    volumes:
-      - .:/workspace
-
-  sr-redpanda-init:
-    image: docker.redpanda.com/redpandadata/redpanda:v24.2.7
-    depends_on:
-      sr-redpanda:
-        condition: service_healthy
-    env_file:
-      - .env.example
-    entrypoint: ["/bin/sh", "/workspace/infra/redpanda/create-topics.sh"]
-    volumes:
-      - .:/workspace:ro
+      - sr-redpanda
+      - sr-minio
+    read_only: true
+    tmpfs:
+      - /tmp
+    networks:
+      - app_net
+      - data_net
+    mem_limit: 1g
+    cpus: "1.5"
+    pids_limit: 512
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   sr-postgres:
     image: postgres:16-bookworm
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - data_net
+    mem_limit: 1g
+    cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   sr-redpanda:
     image: docker.redpanda.com/redpandadata/redpanda:v24.2.7
+    restart: unless-stopped
     command:
       - redpanda
       - start
@@ -115,10 +129,22 @@ services:
       retries: 10
     volumes:
       - redpanda_data:/var/lib/redpanda/data
+    networks:
+      - data_net
+    mem_limit: 1g
+    cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   sr-minio:
     image: minio/minio:latest
+    restart: unless-stopped
     command: server /data --console-address ":9001"
+    env_file:
+      - .env
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
@@ -133,19 +159,23 @@ services:
       - "9001:9001"
     volumes:
       - minio_data:/data
-
-  sr-minio-init:
-    image: minio/mc:latest
-    depends_on:
-      sr-minio:
-        condition: service_healthy
-    env_file:
-      - .env.example
-    entrypoint: ["/bin/sh", "/workspace/infra/minio/create-buckets.sh"]
-    volumes:
-      - .:/workspace:ro
+    networks:
+      - data_net
+    mem_limit: 1g
+    cpus: "1.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   postgres_data:
   redpanda_data:
   minio_data:
+
+networks:
+  edge_net:
+  app_net:
+  data_net:
+    internal: true

@@ -1,0 +1,17 @@
+{
+  "pythonVersion": "3.12",
+  "executionEnvironments": [
+    {
+      "root": "apps/api/src",
+      "extraPaths": [
+        "apps/worker/src"
+      ]
+    },
+    {
+      "root": "apps/worker/src",
+      "extraPaths": [
+        "apps/api/src"
+      ]
+    }
+  ]
+}

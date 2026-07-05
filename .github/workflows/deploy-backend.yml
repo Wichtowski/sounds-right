@@ -1,0 +1,113 @@
+name: Deploy Backend
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-backend-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+      DEPLOY_ARCHIVE: ${{ vars.DEPLOY_ARCHIVE }}
+      RELEASE_VERSION: ${{ github.ref_name }}
+
+    steps:
+      - name: Checkout selected ref
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Package repository
+        run: |
+          rm -f "${DEPLOY_ARCHIVE}" "${RUNNER_TEMP}/${DEPLOY_ARCHIVE}"
+
+          tar \
+            --exclude=.git \
+            --exclude=.github \
+            --exclude=.venv \
+            --exclude=node_modules \
+            --exclude=dist \
+            --exclude=apps/web/node_modules \
+            --exclude=apps/web/dist \
+            --exclude=.env \
+            --exclude=.env.* \
+            --exclude=infra/mailserver/docker-data/dms/mail-data \
+            --exclude=infra/mailserver/docker-data/dms/mail-state \
+            --exclude=infra/mailserver/docker-data/dms/mail-logs \
+            --exclude=infra/mailserver/docker-data/dms/config/postfix-accounts.cf \
+            --exclude=infra/mailserver/docker-data/dms/config/postfix-virtual.cf \
+            -czf "${RUNNER_TEMP}/${DEPLOY_ARCHIVE}" .
+
+          cp "${RUNNER_TEMP}/${DEPLOY_ARCHIVE}" "${DEPLOY_ARCHIVE}"
+
+      - name: Build production env file
+        run: |
+          cat > .env.production <<'EOF'
+          ${{ secrets.ENV_PRODUCTION }}
+          EOF
+
+          sed -i '/^ECHO_APP_VERSION=/d' .env.production
+          printf '\nECHO_APP_VERSION=%s\n' "${RELEASE_VERSION}" >> .env.production
+
+      - name: Copy release files to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          passphrase: ${{ secrets.DEPLOY_SSH_PASSPHRASE }}
+          source: "${{ env.DEPLOY_ARCHIVE }},.env.production"
+          target: /tmp
+
+      - name: Deploy stack on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          passphrase: ${{ secrets.DEPLOY_SSH_PASSPHRASE }}
+          script_stop: true
+          envs: DEPLOY_PATH,DEPLOY_ARCHIVE
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+
+            mkdir -p "${DEPLOY_PATH}"
+            cd "${DEPLOY_PATH}"
+
+            find . -mindepth 1 -maxdepth 1 ! -name '.env' -exec rm -rf {} +
+
+            mv /tmp/.env.production "${DEPLOY_PATH}/.env"
+            chmod 600 "${DEPLOY_PATH}/.env"
+
+            tar -xzf "/tmp/${DEPLOY_ARCHIVE}" -C "${DEPLOY_PATH}"
+            rm -f "/tmp/${DEPLOY_ARCHIVE}"
+
+            # Check ffmpeg availability and warn (no sudo/host package management assumed)
+            if ! command -v ffmpeg >/dev/null 2>&1; then
+              echo "WARNING: ffmpeg not found on the host. Install ffmpeg on the VPS before running the worker."
+            else
+              echo "ffmpeg found"
+            fi
+
+            # Clone or update the public whisper.cpp repo under DEPLOY_PATH/whisper
+            if [ ! -d "${DEPLOY_PATH}/whisper" ]; then
+              git clone https://github.com/ggml-org/whisper.cpp.git "${DEPLOY_PATH}/whisper" || echo "git clone whisper.cpp failed"
+            else
+              (cd "${DEPLOY_PATH}/whisper" && git pull) || echo "git pull whisper.cpp failed"
+            fi
+
+            echo "Note: the actual whisper model binary is expected to be available on the host and its path set in .env (WHISPER_MODEL_PATH). The workflow will not download model binaries."
+
+            docker compose --env-file .env -f docker-compose.prod.yml up -d --build
+            docker compose --env-file .env -f docker-compose.prod.yml ps
