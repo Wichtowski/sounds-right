@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { use } from "react";
 
 import { AppShell } from "@components/AppShell";
 import { JobOverviewCard } from "@components/pages/jobs/JobOverviewCard";
@@ -9,14 +10,15 @@ import { JobTimeline } from "@components/pages/jobs/JobTimeline";
 import { api } from "@lib/api";
 
 type JobDetailPageProps = {
-  params: {
+  params: Promise<{
     jobId: string;
-  };
+  }>;
 };
 
 const activeStatuses = new Set(["queued", "started", "processing"]);
 
-export default function JobDetailPage({ params }: JobDetailPageProps) {
+export default function JobDetailPage({ params: routeParams }: JobDetailPageProps) {
+  const params = use(routeParams);
   const jobQuery = useQuery({
     queryKey: ["job", params.jobId],
     queryFn: () => api.jobs.get(params.jobId),

@@ -8,6 +8,7 @@
     "dev": "vinext dev --hostname 0.0.0.0 --port 3000",
     "build": "vinext build",
     "preview": "vinext start --hostname 0.0.0.0 --port 3000",
+    "test": "bun test",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

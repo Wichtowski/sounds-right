@@ -1,24 +1,24 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, use, useState } from "react";
 
 import { AppShell } from "@components/AppShell";
 import { VersionHeader } from "@components/pages/versions/VersionHeader";
 import { VersionMessages } from "@components/pages/versions/VersionMessages";
 import { VersionUploadControls } from "@components/pages/versions/VersionUploadControls";
-import { api, type UploadUrl } from "@lib/api";
+import { api } from "@lib/api";
 
 type VersionDetailPageProps = {
-  params: {
+  params: Promise<{
     versionId: string;
-  };
+  }>;
 };
 
-export default function VersionDetailPage({ params }: VersionDetailPageProps) {
+export default function VersionDetailPage({ params: routeParams }: VersionDetailPageProps) {
+  const params = use(routeParams);
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
-  const [uploadUrl, setUploadUrl] = useState<UploadUrl | null>(null);
   const [message, setMessage] = useState("");
 
   const versionQuery = useQuery({
@@ -26,45 +26,30 @@ export default function VersionDetailPage({ params }: VersionDetailPageProps) {
     queryFn: () => api.versions.get(params.versionId),
   });
 
-  const uploadUrlMutation = useMutation({
+  const uploadMutation = useMutation({
+    onMutate: () => setMessage(""),
     mutationFn: async () => {
       if (!file) {
         throw new Error("Choose an audio file first");
       }
-      return api.versions.uploadUrl(params.versionId, {
+      const uploadUrl = await api.versions.uploadUrl(params.versionId, {
         filename: file.name,
         content_type: file.type || "audio/mpeg",
         size_bytes: file.size,
       });
-    },
-    onSuccess: async (data) => {
-      setUploadUrl(data);
-      setMessage("Upload URL created");
-      await queryClient.invalidateQueries({ queryKey: ["version", params.versionId] });
-    },
-  });
-
-  const completeMutation = useMutation({
-    mutationFn: async () => {
-      if (!file || !uploadUrl) {
-        throw new Error("Create an upload URL first");
-      }
-
       const uploadResponse = await fetch(uploadUrl.upload_url, {
         method: uploadUrl.method,
         headers: uploadUrl.headers,
         body: file,
       });
       if (!uploadResponse.ok) {
-        throw new Error(`MinIO upload failed with ${uploadResponse.status}`);
+        throw new Error("Audio upload failed.");
       }
 
       return api.versions.uploadComplete(params.versionId, { object_key: uploadUrl.object_key });
     },
-    onSuccess: async () => {
-      setMessage("Upload completed");
-      await queryClient.invalidateQueries({ queryKey: ["version", params.versionId] });
-    },
+    onSuccess: () => setMessage("Upload completed. You can now start transcription."),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["version", params.versionId] }),
   });
 
   const startTranscriptionMutation = useMutation({
@@ -77,35 +62,42 @@ export default function VersionDetailPage({ params }: VersionDetailPageProps) {
 
   function chooseFile(event: ChangeEvent<HTMLInputElement>) {
     setFile(event.target.files?.[0] ?? null);
-    setUploadUrl(null);
     setMessage("");
+    uploadMutation.reset();
   }
+
+  const canUpload = ["draft", "upload_url_created"].includes(versionQuery.data?.status ?? "");
+  const isBusy = uploadMutation.isPending || startTranscriptionMutation.isPending;
 
   return (
     <AppShell>
       <section className="max-w-2xl space-y-6">
         <VersionHeader status={versionQuery.data?.status ?? "loading"} version={versionQuery.data?.version ?? ""} />
         <div className="space-y-4">
-          <input accept=".mp3,.wav,.flac,.m4a,.ogg,audio/*" className="field" onChange={chooseFile} type="file" />
+          <label className="block space-y-2">
+            <span className="text-sm font-medium">Audio file</span>
+            <input
+              accept=".mp3,.wav,.flac,.m4a,.ogg,audio/*"
+              className="field"
+              disabled={!canUpload || isBusy}
+              onChange={chooseFile}
+              type="file"
+            />
+          </label>
           <VersionUploadControls
-            canCompleteUpload={Boolean(file && uploadUrl)}
-            canRequestUploadUrl={Boolean(file)}
+            canUpload={canUpload && Boolean(file)}
             canStartTranscription={versionQuery.data?.status === "uploaded"}
-            isCompletingUpload={completeMutation.isPending}
-            isRequestingUploadUrl={uploadUrlMutation.isPending}
+            isUploading={uploadMutation.isPending}
             isStartingTranscription={startTranscriptionMutation.isPending}
-            objectKey={uploadUrl?.object_key}
-            onCompleteUpload={() => completeMutation.mutate()}
-            onRequestUploadUrl={() => uploadUrlMutation.mutate()}
+            onUpload={() => uploadMutation.mutate()}
             onStartTranscription={() => startTranscriptionMutation.mutate()}
             selectedFileName={file?.name}
           />
         </div>
         <VersionMessages
-          completeError={completeMutation.error?.message}
+          uploadError={uploadMutation.error?.message}
           message={message}
           transcriptionError={startTranscriptionMutation.error?.message}
-          uploadUrlError={uploadUrlMutation.error?.message}
         />
       </section>
     </AppShell>

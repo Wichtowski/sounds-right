@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { use, useMemo, useState } from "react";
 
 import { AppShell } from "@components/AppShell";
 import { KaraokePreview } from "@components/pages/review/KaraokePreview";
@@ -9,13 +9,14 @@ import { TranscriptSegmentList } from "@components/pages/review/TranscriptSegmen
 import { api, type TranscriptSegment } from "@lib/api";
 
 type PublicKaraokePageProps = {
-  params: {
+  params: Promise<{
     artistSlug: string;
     trackSlug: string;
-  };
+  }>;
 };
 
-export default function PublicKaraokePage({ params }: PublicKaraokePageProps) {
+export default function PublicKaraokePage({ params: routeParams }: PublicKaraokePageProps) {
+  const params = use(routeParams);
   const [currentTime, setCurrentTime] = useState(0);
   const karaokeQuery = useQuery({
     queryKey: ["public-karaoke-latest", params.artistSlug, params.trackSlug],

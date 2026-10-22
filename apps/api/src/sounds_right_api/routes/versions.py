@@ -85,7 +85,10 @@ async def create_upload_url_route(
         except VersionNotFoundError:
             raise HTTPException(status_code=404, detail="Version not found") from None
         except InvalidVersionStatusError:
-            raise HTTPException(status_code=409, detail="Version is not in draft status") from None
+            raise HTTPException(
+                status_code=409,
+                detail="Version no longer accepts uploads",
+            ) from None
         except UploadTooLargeError:
             raise HTTPException(status_code=413, detail="Audio file is too large") from None
 
@@ -103,7 +106,10 @@ async def complete_upload_route(
         except VersionNotFoundError:
             raise HTTPException(status_code=404, detail="Version not found") from None
         except UploadSessionNotFoundError:
-            raise HTTPException(status_code=404, detail="Upload session not found") from None
+            raise HTTPException(
+                status_code=404,
+                detail="Upload session is missing or expired. Upload the file again.",
+            ) from None
         except UploadObjectNotFoundError:
             raise HTTPException(status_code=404, detail="Uploaded object was not found") from None
         except InvalidVersionStatusError:

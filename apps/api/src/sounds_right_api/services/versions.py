@@ -4,7 +4,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 
 from minio.error import S3Error
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from sounds_right_api.config import ApiSettings
@@ -98,15 +98,34 @@ async def create_upload_url(
     if payload.size_bytes > settings.max_audio_upload_size_bytes:
         raise UploadTooLargeError
 
-    version = await session.get(TrackVersion, version_id)
+    version = await session.get(TrackVersion, version_id, with_for_update=True)
     if version is None:
         raise VersionNotFoundError
-    if version.status != "draft":
+    if version.status not in {"draft", "upload_url_created"}:
         raise InvalidVersionStatusError
 
     extension = payload.filename.rsplit(".", maxsplit=1)[-1].lower()
-    object_key = f"temp-audio/{version.id}/input.{extension}"
-    expires_at = datetime.now(UTC) + timedelta(seconds=settings.upload_url_expires_seconds)
+    # Separate attempts so an older signed URL cannot overwrite the replacement.
+    # shortcut: abandoned objects remain; configure bucket lifecycle expiry before production.
+    object_key = f"temp-audio/{version.id}/{uuid.uuid4()}/input.{extension}"
+    now = datetime.now(UTC)
+    expires_at = now + timedelta(seconds=settings.upload_url_expires_seconds)
+
+    client = create_public_minio_client(settings)
+    upload_url = client.presigned_put_object(
+        settings.minio_temp_audio_bucket,
+        object_key,
+        expires=timedelta(seconds=settings.upload_url_expires_seconds),
+    )
+
+    await session.execute(
+        update(UploadSession)
+        .where(
+            UploadSession.track_version_id == version.id,
+            UploadSession.completed_at.is_(None),
+        )
+        .values(expires_at=now),
+    )
 
     upload_session = UploadSession(
         track_version_id=version.id,
@@ -123,13 +142,6 @@ async def create_upload_url(
     session.add(upload_session)
     await session.commit()
 
-    client = create_public_minio_client(settings)
-    upload_url = client.presigned_put_object(
-        settings.minio_temp_audio_bucket,
-        object_key,
-        expires=timedelta(seconds=settings.upload_url_expires_seconds),
-    )
-
     return UploadUrlResponse(
         upload_url=upload_url,
         object_key=object_key,
@@ -144,7 +156,7 @@ async def complete_upload(
     payload: UploadCompleteRequest,
     settings: ApiSettings,
 ) -> TrackVersionPublic:
-    version = await session.get(TrackVersion, version_id)
+    version = await session.get(TrackVersion, version_id, with_for_update=True)
     if version is None:
         raise VersionNotFoundError
     if version.status != "upload_url_created":
@@ -155,6 +167,7 @@ async def complete_upload(
             UploadSession.track_version_id == version.id,
             UploadSession.object_key == payload.object_key,
             UploadSession.completed_at.is_(None),
+            UploadSession.expires_at > datetime.now(UTC),
         ),
     )
     if upload_session is None:
