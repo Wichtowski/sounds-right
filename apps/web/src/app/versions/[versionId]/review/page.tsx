@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { use, useMemo, useState } from "react";
 
 import { AppShell } from "@components/AppShell";
 import { KaraokePreview } from "@components/pages/review/KaraokePreview";
@@ -13,12 +13,13 @@ import { TranscriptSegmentList } from "@components/pages/review/TranscriptSegmen
 import { api, type TranscriptSegment } from "@lib/api";
 
 type VersionReviewPageProps = {
-  params: {
+  params: Promise<{
     versionId: string;
-  };
+  }>;
 };
 
-export default function VersionReviewPage({ params }: VersionReviewPageProps) {
+export default function VersionReviewPage({ params: routeParams }: VersionReviewPageProps) {
+  const params = use(routeParams);
   const queryClient = useQueryClient();
   const [currentTime, setCurrentTime] = useState(0);
   const [publishedUrl, setPublishedUrl] = useState<string | undefined>();

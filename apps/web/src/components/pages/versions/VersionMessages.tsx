@@ -2,22 +2,19 @@
 
 type VersionMessagesProps = {
   message: string;
-  uploadUrlError?: string;
-  completeError?: string;
+  uploadError?: string;
   transcriptionError?: string;
 };
 
 export function VersionMessages({
   message,
-  uploadUrlError,
-  completeError,
+  uploadError,
   transcriptionError,
 }: VersionMessagesProps) {
   return (
     <>
-      {message ? <p className="text-sm text-emerald-300">{message}</p> : null}
-      {uploadUrlError ? <p className="text-sm text-red-300">{uploadUrlError}</p> : null}
-      {completeError ? <p className="text-sm text-red-300">{completeError}</p> : null}
+      {message ? <p className="text-sm text-emerald-300" role="status">{message}</p> : null}
+      {uploadError ? <p className="text-sm text-red-300" role="alert">{uploadError} Select your file and try uploading again.</p> : null}
       {transcriptionError ? <p className="text-sm text-red-300">{transcriptionError}</p> : null}
     </>
   );

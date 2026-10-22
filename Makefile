@@ -29,10 +29,12 @@ format:
 check:
 	cd $(API_DIR) && uv run ruff check src && uv run mypy src
 	cd $(WORKER_DIR) && uv run ruff check src && uv run mypy src
+	cd apps/web && bun run lint
 
 test:
 	cd $(API_DIR) && uv run pytest
 	cd $(WORKER_DIR) && uv run pytest
+	cd apps/web && bun run test
 
 worker:
 	./scripts/worker.sh

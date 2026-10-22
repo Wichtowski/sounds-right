@@ -9,6 +9,7 @@ It includes local infrastructure, a Vinext frontend, a Litestar API, Postgres mi
 - Docker Compose
 - `make`
 - `uv` for local Python dependency management
+- Bun for frontend development and checks
 
 ## Local Development
 
@@ -36,6 +37,31 @@ Run checks:
 ```sh
 make check
 ```
+
+## Audio uploads
+
+On a version page, choose an audio file and select **Upload audio**. The app creates
+a signed upload URL, uploads the file, and confirms completion in one action.
+After an interrupted upload, an expired link, or a page refresh, choose the file
+and upload again on the same version. Each attempt uses a separate temporary
+object key; replaced and expired upload sessions cannot be completed. Versions
+that have finished uploading no longer accept replacement uploads.
+Abandoned upload attempts can leave unused objects in temporary storage; configure
+a bucket lifecycle policy to expire them before production use.
+
+The upload service integration tests use a real PostgreSQL database and isolate
+each test in a temporary schema that is removed afterwards:
+
+```sh
+cd apps/api
+TEST_DATABASE_URL=postgresql+asyncpg://user:password@localhost/test_db uv run pytest tests/test_upload_service.py
+```
+
+Without `TEST_DATABASE_URL`, the database tests are skipped; the upload status
+guard tests still run.
+
+`make test` also runs the frontend regression tests for promised route parameters
+on track, version, review, job, and public karaoke pages.
 
 ## Event-driven transcription mock flow
 

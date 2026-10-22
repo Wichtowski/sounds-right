@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { use } from "react";
 
 import { AppShell } from "@components/AppShell";
 import { TrackHeader } from "@components/pages/tracks/TrackHeader";
@@ -8,12 +9,13 @@ import { VersionList } from "@components/pages/tracks/VersionList";
 import { api } from "@lib/api";
 
 type TrackDetailPageProps = {
-  params: {
+  params: Promise<{
     trackId: string;
-  };
+  }>;
 };
 
-export default function TrackDetailPage({ params }: TrackDetailPageProps) {
+export default function TrackDetailPage({ params: routeParams }: TrackDetailPageProps) {
+  const params = use(routeParams);
   const queryClient = useQueryClient();
   const trackQuery = useQuery({
     queryKey: ["track", params.trackId],
